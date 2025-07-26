@@ -28,11 +28,11 @@ jobs:
 
       - name: 📦 Install Backend Dependencies
         working-directory: ./backend
-        run: npm ci --legacy-peer-deps
+        run: npm install --legacy-peer-deps
 
       - name: 📦 Install Frontend Dependencies
         working-directory: ./frontend
-        run: npm ci --legacy-peer-deps
+        run: npm install --legacy-peer-deps
 
       - name: 🔍 Backend Security Audit
         working-directory: ./backend
