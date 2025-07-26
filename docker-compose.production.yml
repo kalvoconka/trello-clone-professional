@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - trello_network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: trello_postgres_prod
+    environment:
+      POSTGRES_DB: ${DB_NAME:-trello_production}
+      POSTGRES_USER: ${DB_USER:-trello}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - trello_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: trello_redis_prod
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_prod_data:/data
+    restart: unless-stopped
+    networks:
+      - trello_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: trello_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./frontend/build:/usr/share/nginx/html
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - trello_network
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+
+networks:
+  trello_network:
+    driver: bridge
