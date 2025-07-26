@@ -3,9 +3,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import authRoutes from './routes/auth';
+import boardRoutes from './routes/boards';
+import listRoutes from './routes/lists';
+import { setupSocketHandlers } from './websocket/socketHandlers';
 import logger, { morganStream } from './config/logger';
 import { requestLogger, errorLogger } from './middleware/logging';
 
@@ -13,6 +18,13 @@ import { requestLogger, errorLogger } from './middleware/logging';
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  },
+});
 const PORT = process.env.PORT || 5000;
 
 // Security middleware
@@ -47,6 +59,11 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/boards', boardRoutes);
+app.use('/api/lists', listRoutes);
+
+// Setup WebSocket handlers
+setupSocketHandlers(io);
 
 // Health check with detailed status
 app.get('/api/health', async (req, res) => {
@@ -100,14 +117,18 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
+  httpServer.close(() => {
     logger.info('HTTP server closed');
+    io.close(() => {
+      logger.info('WebSocket server closed');
+    });
   });
 });
 
-const server = app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`📊 Health check: http://localhost:${PORT}/api/health`);
   logger.info(`📚 API Docs: http://localhost:${PORT}/api/docs`);
+  logger.info(`🔌 WebSocket server ready`);
   logger.info(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

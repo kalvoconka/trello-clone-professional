@@ -5,6 +5,8 @@ import { PrivateRoute } from './components/PrivateRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
+import { Boards } from './pages/Boards';
+import { Board } from './pages/Board';
 
 function App() {
   return (
@@ -19,6 +21,22 @@ function App() {
               element={
                 <PrivateRoute>
                   <Dashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/boards"
+              element={
+                <PrivateRoute>
+                  <Boards />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/board/:id"
+              element={
+                <PrivateRoute>
+                  <Board />
                 </PrivateRoute>
               }
             />
