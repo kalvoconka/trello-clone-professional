@@ -1,0 +1,231 @@
+name: ⚡ Performance Testing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 4 * * 1'  # Every Monday at 4 AM
+  workflow_dispatch:
+
+jobs:
+  lighthouse-audit:
+    name: 🏮 Lighthouse Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        working-directory: ./frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: 🏗️ Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: 🌐 Serve build
+        working-directory: ./frontend
+        run: |
+          npm install -g serve
+          serve -s build -p 3000 &
+          sleep 10
+
+      - name: 🏮 Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Upload Lighthouse reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 30
+
+  bundle-analysis:
+    name: 📦 Bundle Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        working-directory: ./frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: 📊 Analyze bundle size
+        working-directory: ./frontend
+        run: |
+          npm install -g webpack-bundle-analyzer
+          npm run build
+          
+          # Generate bundle analysis
+          npx webpack-bundle-analyzer build/static/js/*.js --report --mode static --no-open > bundle-report.html
+
+      - name: 📈 Bundle size check
+        working-directory: ./frontend
+        run: |
+          echo "## 📦 Bundle Size Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check main bundle size (should be < 500KB)
+          main_bundle=$(find build/static/js -name "main.*.js" -exec stat -f%z {} \; | head -1)
+          main_kb=$((main_bundle / 1024))
+          
+          echo "**Main Bundle**: ${main_kb}KB" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $main_kb -gt 500 ]; then
+            echo "⚠️ **Warning**: Main bundle exceeds 500KB limit" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **Good**: Main bundle is within 500KB limit" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check total build size
+          total_size=$(du -sk build | cut -f1)
+          echo "**Total Build Size**: ${total_size}KB" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📊 Upload bundle analysis
+        uses: actions/upload-artifact@v3
+        with:
+          name: bundle-analysis
+          path: frontend/bundle-report.html
+          retention-days: 30
+
+  load-testing:
+    name: 🚀 Load Testing
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: trello_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+
+      - name: 📦 Install backend dependencies
+        working-directory: ./backend
+        run: npm ci --legacy-peer-deps
+
+      - name: 🗄️ Setup database
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/trello_test
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+
+      - name: 🚀 Start backend server
+        working-directory: ./backend
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/trello_test
+          JWT_SECRET: test-secret-32-characters-long-key
+          JWT_REFRESH_SECRET: test-refresh-secret-32-chars-key
+          PORT: 5000
+        run: |
+          npm run build
+          npm start &
+          sleep 10
+
+      - name: 🧪 Install k6 for load testing
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: 📝 Create load test script
+        run: |
+          cat > load-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+
+          export let options = {
+            stages: [
+              { duration: '30s', target: 10 },  // Ramp up
+              { duration: '1m', target: 50 },   // Stay at 50 users
+              { duration: '30s', target: 0 },   // Ramp down
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<500'], // 95% of requests under 500ms
+              http_req_failed: ['rate<0.1'],    // Error rate under 10%
+            },
+          };
+
+          export default function() {
+            // Health check
+            let healthRes = http.get('http://localhost:5000/api/health');
+            check(healthRes, {
+              'health check status is 200': (r) => r.status === 200,
+              'health check response time < 100ms': (r) => r.timings.duration < 100,
+            });
+
+            sleep(1);
+          }
+          EOF
+
+      - name: 🚀 Run load test
+        run: |
+          echo "🚀 Starting load test..."
+          k6 run load-test.js --out json=load-test-results.json
+
+      - name: 📊 Analyze load test results
+        run: |
+          echo "## 🚀 Load Testing Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f load-test-results.json ]; then
+            # Extract key metrics (simplified)
+            echo "**Test Completed**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+            echo "**Target Load**: 50 concurrent users" >> $GITHUB_STEP_SUMMARY
+            echo "**Duration**: 2 minutes" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📊 Detailed results available in artifacts" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Load test results not found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 📊 Upload load test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: load-test-results
+          path: load-test-results.json
+          retention-days: 30

@@ -1,0 +1,116 @@
+name: 🔒 Security Audit
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Every Monday at 2 AM
+  push:
+    branches: [main]
+    paths:
+      - 'backend/package*.json'
+      - 'frontend/package*.json'
+      - '.github/workflows/security.yml'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  security-audit:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+
+      - name: 📦 Install Backend Dependencies
+        working-directory: ./backend
+        run: npm ci --legacy-peer-deps
+
+      - name: 📦 Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: 🔍 Backend Security Audit
+        working-directory: ./backend
+        run: |
+          echo "🔍 Running backend security audit..."
+          npm audit --audit-level=moderate
+          npm audit --json > backend-audit.json || true
+
+      - name: 🔍 Frontend Security Audit
+        working-directory: ./frontend
+        run: |
+          echo "🔍 Running frontend security audit..."
+          npm audit --audit-level=moderate
+          npm audit --json > frontend-audit.json || true
+
+      - name: 📊 Upload Security Reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-audit-reports
+          path: |
+            backend/backend-audit.json
+            frontend/frontend-audit.json
+          retention-days: 30
+
+      - name: 🚨 Check for Critical Vulnerabilities
+        run: |
+          echo "🚨 Checking for critical vulnerabilities..."
+          
+          # Check backend
+          if grep -q '"severity": "critical"' backend/backend-audit.json 2>/dev/null; then
+            echo "❌ Critical vulnerabilities found in backend!"
+            echo "::error::Critical security vulnerabilities detected in backend dependencies"
+            exit 1
+          fi
+          
+          # Check frontend
+          if grep -q '"severity": "critical"' frontend/frontend-audit.json 2>/dev/null; then
+            echo "❌ Critical vulnerabilities found in frontend!"
+            echo "::error::Critical security vulnerabilities detected in frontend dependencies"
+            exit 1
+          fi
+          
+          echo "✅ No critical vulnerabilities found"
+
+      - name: 📝 Generate Security Summary
+        if: always()
+        run: |
+          echo "## 🔒 Security Audit Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Audit Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Backend summary
+          if [ -f backend/backend-audit.json ]; then
+            backend_vulns=$(jq '.metadata.vulnerabilities.total // 0' backend/backend-audit.json 2>/dev/null || echo "0")
+            echo "**Backend**: $backend_vulns vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Frontend summary
+          if [ -f frontend/frontend-audit.json ]; then
+            frontend_vulns=$(jq '.metadata.vulnerabilities.total // 0' frontend/frontend-audit.json 2>/dev/null || echo "0")
+            echo "**Frontend**: $frontend_vulns vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "💡 **Next Steps**: Review and update dependencies with known vulnerabilities" >> $GITHUB_STEP_SUMMARY
+
+  dependency-review:
+    name: 🔍 Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Dependency Review
+        uses: actions/dependency-review-action@v3
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: true
