@@ -1,0 +1,179 @@
+# 📋 CHECKLIST - Trello Clone Development
+
+## 🎯 Sprint 1: Fundación y Setup (1-2 días)
+- [x] Inicializar Git y crear estructura de branches
+- [x] Crear README.md profesional con arquitectura
+- [x] Crear CHANGELOG.md
+- [x] Crear este CHECKLIST.md
+- [x] Configurar .gitignore apropiado
+- [ ] Setup estructura de carpetas profesional
+- [ ] Configurar ESLint + Prettier
+- [ ] Configurar Husky + lint-staged
+- [ ] Setup Docker + docker-compose
+- [ ] Configurar variables de entorno (.env)
+- [ ] Setup base de datos (PostgreSQL + Prisma)
+- [ ] Configurar testing (Jest + React Testing Library)
+- [ ] CI/CD básico con GitHub Actions
+- [ ] Primer commit y push
+
+## 🎯 Sprint 2: Autenticación y Usuarios (2-3 días)
+- [ ] Diseñar esquema de base de datos para usuarios
+- [ ] Crear modelo Usuario con Prisma
+- [ ] Implementar registro de usuarios (hash passwords con bcrypt)
+- [ ] Implementar login con JWT
+- [ ] Implementar refresh tokens
+- [ ] Crear middleware de autenticación
+- [ ] Crear endpoints protegidos de prueba
+- [ ] Frontend: Crear página de login
+- [ ] Frontend: Crear página de registro
+- [ ] Frontend: Implementar Context API para auth
+- [ ] Frontend: Crear PrivateRoute component
+- [ ] Frontend: Persistir sesión en localStorage
+- [ ] Tests unitarios para auth backend
+- [ ] Tests unitarios para auth frontend
+- [ ] Documentar API de autenticación
+
+## 🎯 Sprint 3: Boards y Listas (3-4 días)
+- [ ] Diseñar esquema para Boards y Lists
+- [ ] Crear modelos Board y List en Prisma
+- [ ] Implementar CRUD API para boards
+  - [ ] POST /api/boards - Crear board
+  - [ ] GET /api/boards - Listar boards del usuario
+  - [ ] GET /api/boards/:id - Obtener board específico
+  - [ ] PUT /api/boards/:id - Actualizar board
+  - [ ] DELETE /api/boards/:id - Eliminar board
+- [ ] Implementar CRUD API para listas
+  - [ ] POST /api/boards/:boardId/lists - Crear lista
+  - [ ] PUT /api/lists/:id - Actualizar lista
+  - [ ] DELETE /api/lists/:id - Eliminar lista
+  - [ ] PUT /api/lists/reorder - Reordenar listas
+- [ ] Frontend: Crear Dashboard con grid de boards
+- [ ] Frontend: Crear modal para nuevo board
+- [ ] Frontend: Crear vista detalle de board
+- [ ] Frontend: Implementar creación de listas
+- [ ] Frontend: Implementar drag & drop de listas
+- [ ] Setup Socket.io en backend
+- [ ] Setup Socket.io en frontend
+- [ ] Sincronización real-time de cambios
+- [ ] Tests E2E para flujo de boards
+- [ ] Optimización de queries con Prisma
+
+## 🎯 Sprint 4: Cards y Funcionalidades (3-4 días)
+- [ ] Diseñar esquema completo para Cards
+- [ ] Crear modelo Card con todos los campos
+- [ ] Implementar CRUD API para cards
+  - [ ] POST /api/lists/:listId/cards - Crear card
+  - [ ] GET /api/cards/:id - Obtener detalle de card
+  - [ ] PUT /api/cards/:id - Actualizar card
+  - [ ] DELETE /api/cards/:id - Eliminar card
+  - [ ] PUT /api/cards/move - Mover card entre listas
+- [ ] Frontend: Componente Card
+- [ ] Frontend: Modal detalle de card
+- [ ] Frontend: Drag & drop de cards entre listas
+- [ ] Implementar comentarios en cards
+  - [ ] Modelo Comment en Prisma
+  - [ ] API endpoints para comentarios
+  - [ ] UI para agregar/editar/eliminar comentarios
+- [ ] Implementar etiquetas (labels)
+  - [ ] Modelo Label
+  - [ ] UI selector de etiquetas
+  - [ ] Filtrado por etiquetas
+- [ ] Asignación de usuarios a cards
+  - [ ] UI para asignar usuarios
+  - [ ] Avatar de usuarios asignados
+- [ ] Búsqueda y filtros
+  - [ ] Búsqueda por título/descripción
+  - [ ] Filtros por etiqueta/usuario/fecha
+- [ ] Tests unitarios para cards
+- [ ] Tests de integración
+
+## 🎯 Sprint 5: Features Avanzadas (2-3 días)
+- [ ] Sistema de invitaciones
+  - [ ] Modelo BoardMember
+  - [ ] Envío de invitaciones por email
+  - [ ] Aceptar/rechazar invitaciones
+- [ ] Permisos y roles
+  - [ ] Owner, Admin, Member roles
+  - [ ] Middleware de autorización
+  - [ ] UI para gestión de permisos
+- [ ] Historial de actividad
+  - [ ] Modelo Activity
+  - [ ] Registrar todas las acciones
+  - [ ] Feed de actividad en UI
+- [ ] Notificaciones real-time
+  - [ ] Notificaciones in-app
+  - [ ] Badge de notificaciones
+  - [ ] Preferencias de notificación
+- [ ] Archivado de cards/listas
+  - [ ] Soft delete implementation
+  - [ ] Vista de elementos archivados
+  - [ ] Restaurar elementos
+- [ ] Adjuntos en cards
+  - [ ] Upload de archivos
+  - [ ] Preview de imágenes
+  - [ ] Gestión de storage
+- [ ] Due dates y recordatorios
+  - [ ] Selector de fecha/hora
+  - [ ] Notificaciones de vencimiento
+  - [ ] Calendario view
+- [ ] Checklists en cards
+  - [ ] Modelo Checklist y ChecklistItem
+  - [ ] UI para checklists
+  - [ ] Progreso de checklist
+
+## 🎯 Sprint 6: Polish y Producción (2 días)
+- [ ] Optimización de performance
+  - [ ] Lazy loading de componentes
+  - [ ] Memoización estratégica
+  - [ ] Optimización de re-renders
+  - [ ] Code splitting
+- [ ] PWA configuration
+  - [ ] Service Worker
+  - [ ] Manifest.json
+  - [ ] Offline capability
+  - [ ] Install prompt
+- [ ] Tests completos
+  - [ ] Coverage > 80%
+  - [ ] Tests E2E críticos
+  - [ ] Tests de performance
+- [ ] Documentación API (Swagger)
+  - [ ] Swagger setup
+  - [ ] Documentar todos los endpoints
+  - [ ] Ejemplos de uso
+- [ ] Error handling robusto
+  - [ ] Error boundaries en React
+  - [ ] Logging centralizado
+  - [ ] User-friendly error messages
+- [ ] Rate limiting
+  - [ ] Implementar con express-rate-limit
+  - [ ] Configurar por endpoint
+  - [ ] Manejo de límites excedidos
+- [ ] Monitoring (Sentry)
+  - [ ] Setup Sentry backend
+  - [ ] Setup Sentry frontend
+  - [ ] Source maps configuration
+- [ ] Deploy a producción
+  - [ ] Configurar Vercel/Railway
+  - [ ] Variables de entorno
+  - [ ] GitHub Actions para deploy
+  - [ ] Health checks
+  - [ ] Backup strategy
+
+## 📊 Métricas de Éxito
+- [ ] Todos los tests pasando
+- [ ] Coverage > 80%
+- [ ] Lighthouse score > 90
+- [ ] No errores en consola
+- [ ] Responsive en todos los dispositivos
+- [ ] Tiempo de carga < 3s
+- [ ] Real-time sync funcionando
+- [ ] Zero downtime deployment
+
+## 🔧 Tareas Técnicas Continuas
+- [ ] Code reviews en cada PR
+- [ ] Actualizar documentación
+- [ ] Refactoring cuando sea necesario
+- [ ] Optimización de queries
+- [ ] Seguridad: revisar OWASP top 10
+- [ ] Accesibilidad: WCAG 2.1 AA
+- [ ] i18n preparación
